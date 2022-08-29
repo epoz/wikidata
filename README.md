@@ -28,7 +28,7 @@ The start was downloading a dump, in this case `May 12 2022 latest-all.nt.gz`, i
 
 As an aside, the nice thing about using the .nt format files is that each triple is a single line. Unix tools generally are really well-suited to beavering through line-oriented data formats. If it were .ttl files they are easier to read for humans, but not as nicely self-contained per line.
 
-Then we want to have a different way to store IRIs. In stead of having the IRIs repeated in whatever format we decide to convert or load the data, can we hash them into an integer? My first though was using a hash-function into a 32-bit integer of some kind. We do not need a cryptographically strong hash, just something that [does not give collisions](<[SipHash](https://en.wikipedia.org/wiki/SipHash)>). But after some experiments with smaller hash sizes, and in particularly using [MurmurHash](https://en.wikipedia.org/wiki/MurmurHash) it quickly became apparent that for 32-bit hashes on the Wikidata IRIs there are too many collisions too quickly, and using a 128-bit negates the whole idea.
+Then we want to have a different way to store IRIs. In stead of having the IRIs repeated in whatever format we decide to convert or load the data, can we hash them into an integer? My first though was using a hash-function into a 32-bit integer of some kind. We do not need a cryptographically strong hash, just something that [does not give collisions like SipHash](https://en.wikipedia.org/wiki/SipHash). But after some experiments with smaller hash sizes, and in particularly using [MurmurHash](https://en.wikipedia.org/wiki/MurmurHash) it quickly became apparent that for 32-bit hashes on the Wikidata IRIs there are too many collisions too quickly, and using a 128-bit sized hash to avoid collisions negates the whole idea of a short integer.
 
 An alternative possibility is to store **all** the IRIs in a single database table, and use the database rowids as the unique ID... SQLite to the rescue, extract all the IRIs and load them into a database that looks like:
 
@@ -52,3 +52,5 @@ For querying, we can load the data into Duckdb like this:
 ```SQL
 CREATE TABLE spo AS SELECT * FROM read_csv_auto('<some_filename>', delim='\t', header=False, columns={'s':'UINTEGER', 'p':'UINTEGER', 'o':'UINTEGER'});
 ```
+
+Loading the .spo files using DuckDB native CSV loading is very fast, and also promising in some initial tests. This avoids using some Parquet files as an interim format.
